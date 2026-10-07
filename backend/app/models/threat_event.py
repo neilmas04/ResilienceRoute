@@ -28,6 +28,12 @@ class IncidentModel(Base):
     resolved_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     
+    # Threat domain extension fields
+    radius_m: Mapped[float] = mapped_column(Float, default=500.0)
+    first_seen: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    last_seen: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    evidence_references: Mapped[list] = mapped_column(JSON, default=list)
+
     # Complex fields stored as JSON
     alerts: Mapped[list] = mapped_column(JSON, default=list)
     escalations: Mapped[list] = mapped_column(JSON, default=list)
