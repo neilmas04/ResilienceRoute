@@ -41,5 +41,11 @@ class Settings:
             env_osm_path if env_osm_path else str(default_osm_path)
         )
 
+        # Database Path Configuration (Fallback to data/aegis.db)
+        default_db_path = ROOT_DIR / "data" / "aegis.db"
+        env_db_path = os.getenv("DATABASE_PATH")
+        self.DATABASE_PATH: str = env_db_path if env_db_path else str(default_db_path)
+        self.DATABASE_URL: str = f"sqlite:///{self.DATABASE_PATH}"
+
 
 settings = Settings()

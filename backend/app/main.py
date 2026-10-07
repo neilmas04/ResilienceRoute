@@ -3,6 +3,11 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from .services.routing_service import routing_service
 
+from app.database.connection import init_db
+
+# Initialize database schema automatically on startup
+init_db()
+
 app = FastAPI(
     title="AEGIS-COP API",
     description="Backend for AEGIS-COP (Tactical Edge Common Operating Picture)",

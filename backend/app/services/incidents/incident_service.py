@@ -3,11 +3,28 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from .models import Incident, TimelineEvent, IncidentAuditLog
 from ..national_risk_service import national_risk_service
+from app.repositories.threat_repository import threat_repository
 
 class IncidentService:
     def __init__(self):
+        self._load_from_db()
+
+    def _load_from_db(self):
         self.incidents: Dict[str, Incident] = {}
         self.audit_logs: List[IncidentAuditLog] = []
+        db_records = threat_repository.get_all()
+        for rec in db_records:
+            timeline_events = [TimelineEvent(**t) if isinstance(t, dict) else t for t in rec.get("timeline", [])]
+            rec["timeline"] = timeline_events
+            inc = Incident(**rec)
+            self.incidents[inc.incident_id] = inc
+
+    def _persist_incident(self, incident: Incident):
+        # Convert Incident model to dict for persistence
+        data = incident.dict()
+        # Convert TimelineEvent objects to dicts for JSON column
+        data["timeline"] = [t if isinstance(t, dict) else t.dict() for t in incident.timeline]
+        threat_repository.save(data)
 
     def _log_audit(self, actor: str, role: str, action: str, incident_id: str, result: str, metadata: Dict[str, Any] = None):
         log = IncidentAuditLog(
@@ -31,6 +48,7 @@ class IncidentService:
         )
         incident.timeline.append(event)
         incident.updated_at = datetime.utcnow().isoformat() + "Z"
+        self._persist_incident(incident)
 
     def scan_for_incidents(self) -> Dict[str, Any]:
         """Reads risk engine and recommends/updates incidents."""
@@ -139,6 +157,7 @@ class IncidentService:
                             f"Severity changed from {old_sev} to {severity}",
                             "RISK_ENGINE", "SYSTEM"
                         )
+                        self._persist_incident(existing_inc)
                         updated_incidents.append(existing_inc.incident_id)
                 else:
                     title = region.get("title") or f"DEMO INCIDENT: {hazard_type} in {district}"
@@ -161,6 +180,7 @@ class IncidentService:
                     self.incidents[inc.incident_id] = inc
                     self._add_timeline(inc, "INCIDENT_CREATED", "Incident detected by Risk Engine", "RISK_ENGINE", "SYSTEM")
                     self._log_audit("SYSTEM", "SYSTEM", "INCIDENT_CREATED", inc.incident_id, "SUCCESS")
+                    self._persist_incident(inc)
                     new_incidents.append(inc.incident_id)
 
         return {
@@ -170,6 +190,7 @@ class IncidentService:
         }
 
     def get_all(self, state: str = None, status: str = None) -> List[Dict[str, Any]]:
+        self._load_from_db()
         res = []
         for inc in self.incidents.values():
             if state and inc.state != state: continue
@@ -180,11 +201,13 @@ class IncidentService:
         return res
 
     def get_by_id(self, incident_id: str) -> Optional[Dict[str, Any]]:
+        self._load_from_db()
         inc = self.incidents.get(incident_id)
         if not inc: return None
         return inc.dict()
 
     def update_status(self, incident_id: str, new_status: str, actor: str = "EOC_OPERATOR", role: str = "EOC_OPERATOR") -> Dict[str, Any]:
+        self._load_from_db()
         inc = self.incidents.get(incident_id)
         if not inc:
             return {"error": "Incident not found"}
@@ -196,18 +219,23 @@ class IncidentService:
             
         self._add_timeline(inc, "STATUS_UPDATED", f"Status changed from {old_status} to {new_status}", "OPERATOR", actor)
         self._log_audit(actor, role, "INCIDENT_UPDATED", incident_id, f"SUCCESS: Status={new_status}")
+        self._persist_incident(inc)
         return {"status": "success", "incident": inc.dict()}
 
     def link_alert(self, incident_id: str, alert_id: str, actor: str = "SYSTEM"):
+        self._load_from_db()
         inc = self.incidents.get(incident_id)
         if inc and alert_id not in inc.alerts:
             inc.alerts.append(alert_id)
             self._add_timeline(inc, "ALERT_LINKED", f"Alert {alert_id} linked to incident", "ALERT_ENGINE", actor)
+            self._persist_incident(inc)
 
     def link_escalation(self, incident_id: str, escalation_id: str, actor: str = "SYSTEM"):
+        self._load_from_db()
         inc = self.incidents.get(incident_id)
         if inc and escalation_id not in inc.escalations:
             inc.escalations.append(escalation_id)
             self._add_timeline(inc, "AUTHORITY_ESCALATED", f"Authority Escalation {escalation_id} recommended", "OPERATOR", actor)
+            self._persist_incident(inc)
 
 incident_service = IncidentService()

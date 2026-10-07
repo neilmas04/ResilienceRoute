@@ -9,3 +9,4 @@ shapely
 scikit-learn
 rasterio
 requests
+sqlalchemy>=2.0.0

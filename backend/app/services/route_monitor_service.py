@@ -4,11 +4,18 @@ from typing import Dict, Any, List
 
 from .road_hazard_service import road_hazard_service
 from .weather_adapter import weather_adapter
+from app.repositories.monitored_route_repository import monitored_route_repository
 
 class RouteMonitorService:
     def __init__(self):
-        self._monitored_routes: Dict[str, dict] = {}
-        
+        self._load_from_db()
+
+    def _load_from_db(self):
+        self._monitored_routes: Dict[str, dict] = monitored_route_repository.get_all()
+
+    def _persist_route(self, route_record: dict):
+        monitored_route_repository.save(route_record)
+
     def _calculate_monitor_status(self, segments: List[dict]) -> tuple[str, dict]:
         critical = 0
         high = 0
@@ -78,6 +85,7 @@ class RouteMonitorService:
         }
         
         self._monitored_routes[route_id] = route_record
+        self._persist_route(route_record)
         
         return {
             "status": "success",
@@ -88,6 +96,7 @@ class RouteMonitorService:
         }
         
     def get_route(self, route_id: str) -> dict:
+        self._load_from_db()
         if route_id not in self._monitored_routes:
             return {"status": "not_found"}
             
@@ -113,6 +122,7 @@ class RouteMonitorService:
         return res
         
     def reassess_route(self, route_id: str) -> dict:
+        self._load_from_db()
         if route_id not in self._monitored_routes:
             return {"status": "not_found"}
             
@@ -151,6 +161,8 @@ class RouteMonitorService:
                 "reason": reason
             })
             
+        self._persist_route(record)
+
         res = {
             "status": "success",
             "route_id": route_id,
@@ -172,6 +184,7 @@ class RouteMonitorService:
         return res
 
     def apply_replacement(self, route_id: str, candidate_route: dict, recommendation_id: str, actor: str = "EOC Operator"):
+        self._load_from_db()
         if route_id not in self._monitored_routes:
             return
             
@@ -201,5 +214,7 @@ class RouteMonitorService:
         record["current_hazard_summary"] = new_summary
         record["monitor_status"] = "REPLACED"
         record["last_checked_at"] = now
+        
+        self._persist_route(record)
 
 route_monitor_service = RouteMonitorService()
