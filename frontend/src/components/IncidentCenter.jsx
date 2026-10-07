@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
 export default function IncidentCenter({ onClose, sharedSelectedIncident, onSelectIncident }) {
   const [incidents, setIncidents] = useState([]);
@@ -8,6 +9,7 @@ export default function IncidentCenter({ onClose, sharedSelectedIncident, onSele
   const [loading, setLoading] = useState(true);
   const [scanStep, setScanStep] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [planLoading, setPlanLoading] = useState(false);
 
   useEffect(() => {
     fetchIncidents();
@@ -31,7 +33,7 @@ export default function IncidentCenter({ onClose, sharedSelectedIncident, onSele
   async function fetchIncidents() {
     try {
       setLoading(true);
-      const res = await fetch('http://127.0.0.1:8000/api/national/incidents');
+      const res = await fetch(`${API_BASE_URL}/national/incidents`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed to fetch incidents');
       setIncidents(data.records || []);
@@ -50,7 +52,7 @@ export default function IncidentCenter({ onClose, sharedSelectedIncident, onSele
   async function fetchResponsePlan(incId) {
     try {
       setTeamAssigned(false);
-      const res = await fetch(`http://127.0.0.1:8000/api/national/incidents/${incId}/response-plan`);
+      const res = await fetch(`${API_BASE_URL}/national/incidents/${incId}/response-plan`);
       if (res.ok) {
         const data = await res.json();
         if (data.records && data.records.length > 0) {
@@ -81,7 +83,7 @@ export default function IncidentCenter({ onClose, sharedSelectedIncident, onSele
       await new Promise(r => setTimeout(r, 500));
 
       setScanStep('IDENTIFYING INCIDENTS...');
-      const res = await fetch('http://127.0.0.1:8000/api/national/incidents/recommend', { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/national/incidents/recommend`, { method: 'POST' });
       await res.json().catch(() => ({}));
 
       setScanStep('INCIDENTS READY');
@@ -96,9 +98,10 @@ export default function IncidentCenter({ onClose, sharedSelectedIncident, onSele
   }
 
   async function handleGeneratePlan() {
-    if (!selectedIncident?.incident_id) return;
+    if (!selectedIncident?.incident_id || planLoading) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/incidents/${selectedIncident.incident_id}/response-plan`, { method: 'POST' });
+      setPlanLoading(true);
+      const res = await fetch(`${API_BASE_URL}/national/incidents/${selectedIncident.incident_id}/response-plan`, { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.plan) {
         setActivePlan(data.plan);
@@ -108,15 +111,18 @@ export default function IncidentCenter({ onClose, sharedSelectedIncident, onSele
       }
     } catch (err) {
       showToast("Generate plan error: " + err.message, "error");
+    } finally {
+      setPlanLoading(false);
     }
   }
 
   async function handleApprovePlan() {
-    if (!activePlan) return;
+    if (!activePlan || planLoading) return;
     const pId = activePlan.response_plan_id || activePlan.plan_id;
     if (!pId) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/response-plans/${pId}/approve`, { method: 'POST' });
+      setPlanLoading(true);
+      const res = await fetch(`${API_BASE_URL}/national/response-plans/${pId}/approve`, { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.plan) {
         setActivePlan(data.plan);
@@ -127,6 +133,8 @@ export default function IncidentCenter({ onClose, sharedSelectedIncident, onSele
       }
     } catch (err) {
       showToast("Approve plan error: " + err.message, "error");
+    } finally {
+      setPlanLoading(false);
     }
   }
 
@@ -138,12 +146,12 @@ export default function IncidentCenter({ onClose, sharedSelectedIncident, onSele
 
   async function handleAction(id, actionPath) {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/incidents/${id}/${actionPath}`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/national/incidents/${id}/${actionPath}`, { method: 'POST' });
       if (!res.ok) throw new Error(`Failed to ${actionPath}`);
       showToast(`Incident status updated to ${actionPath.toUpperCase()}`, "success");
       fetchIncidents();
       
-      const detailRes = await fetch(`http://127.0.0.1:8000/api/national/incidents/${id}`);
+      const detailRes = await fetch(`${API_BASE_URL}/national/incidents/${id}`);
       const d = await detailRes.json();
       if (detailRes.ok) {
         setSelectedIncident(d.record);
@@ -368,16 +376,18 @@ export default function IncidentCenter({ onClose, sharedSelectedIncident, onSele
                     {!activePlan ? (
                       <button
                         onClick={handleGeneratePlan}
-                        className="bg-[#0B4F8A] hover:bg-[#083B68] text-white font-bold py-1.5 px-4 rounded text-xs shadow-sm"
+                        disabled={planLoading}
+                        className="bg-[#0B4F8A] hover:bg-[#083B68] text-white font-bold py-1.5 px-4 rounded text-xs shadow-sm disabled:opacity-50"
                       >
-                        GENERATE RESPONSE PLAN
+                        {planLoading ? 'GENERATING...' : 'GENERATE RESPONSE PLAN'}
                       </button>
                     ) : activePlan.status === 'PENDING_APPROVAL' ? (
                       <button
                         onClick={handleApprovePlan}
-                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 px-4 rounded text-xs shadow-sm"
+                        disabled={planLoading}
+                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 px-4 rounded text-xs shadow-sm disabled:opacity-50"
                       >
-                        APPROVE RESPONSE PLAN
+                        {planLoading ? 'APPROVING...' : 'APPROVE RESPONSE PLAN'}
                       </button>
                     ) : (
                       <div className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded border border-emerald-200 flex items-center gap-1.5">

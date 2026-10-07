@@ -5,6 +5,7 @@ import ResourceCenter from './ResourceCenter';
 import IncidentCenter from './IncidentCenter';
 import AlertCenter from './AlertCenter';
 import WeatherDashboard from './WeatherDashboard';
+import { API_BASE_URL } from '../config';
 
 export default function EocDashboard({
   viewMode,
@@ -93,7 +94,7 @@ export default function EocDashboard({
 
   async function fetchIncidentResponsePlan(incId) {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/incidents/${incId}/response-plan`);
+      const res = await fetch(`${API_BASE_URL}/national/incidents/${incId}/response-plan`);
       if (res.ok) {
         const data = await res.json();
         if (data.records && data.records.length > 0) {
@@ -117,14 +118,14 @@ export default function EocDashboard({
   async function fetchAllData() {
     try {
       const [eocRes, incRes, riskRes, resRes, fuRes, altRes, satRes, wfRes] = await Promise.all([
-        fetch('http://127.0.0.1:8000/api/national/eoc/status').then(r => r.json()).catch(() => null),
-        fetch('http://127.0.0.1:8000/api/national/incidents').then(r => r.json()).catch(() => null),
-        fetch('http://127.0.0.1:8000/api/national/risk').then(r => r.json()).catch(() => null),
-        fetch('http://127.0.0.1:8000/api/national/resources').then(r => r.json()).catch(() => null),
-        fetch('http://127.0.0.1:8000/api/national/field-units').then(r => r.json()).catch(() => null),
-        fetch('http://127.0.0.1:8000/api/national/alerts').then(r => r.json()).catch(() => null),
-        fetch('http://127.0.0.1:8000/api/national/satellite/layers').then(r => r.json()).catch(() => null),
-        fetch('http://127.0.0.1:8000/api/weather/forecast').then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/national/eoc/status`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/national/incidents`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/national/risk`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/national/resources`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/national/field-units`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/national/alerts`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/national/satellite/layers`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/weather/forecast`).then(r => r.json()).catch(() => null),
       ]);
 
       if (eocRes) setEocStatus(eocRes);
@@ -149,7 +150,7 @@ export default function EocDashboard({
 
   async function fetchIncidentDetail(incidentId) {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/incidents/${incidentId}`);
+      const res = await fetch(`${API_BASE_URL}/national/incidents/${incidentId}`);
       if (res.ok) {
         const data = await res.json();
         setSelectedIncidentDetail(data.record);
@@ -171,19 +172,19 @@ export default function EocDashboard({
     try {
       setDemoStep('ACTIVATING_SCENARIO');
       showToast("Activating controlled heavy rain scenario...", "info");
-      await fetch('http://127.0.0.1:8000/api/scenario/activate', { method: 'POST' });
+      await fetch(`${API_BASE_URL}/scenario/activate`, { method: 'POST' });
 
       setDemoStep('REFRESHING_RISK');
       showToast("Updating regional flood risk scores...", "info");
-      await fetch('http://127.0.0.1:8000/api/national/risk');
+      await fetch(`${API_BASE_URL}/national/risk`);
 
       setDemoStep('ASSESSING_INCIDENTS');
       showToast("Scanning feeds & generating incident candidates...", "info");
-      await fetch('http://127.0.0.1:8000/api/national/incidents/recommend', { method: 'POST' }).catch(() => {});
+      await fetch(`${API_BASE_URL}/national/incidents/recommend`, { method: 'POST' }).catch(() => {});
 
       setDemoStep('PREPARING_RESPONSE');
       showToast("Running 3-hour inundation nowcast model...", "info");
-      await fetch('http://127.0.0.1:8000/api/flood/simulate', {
+      await fetch(`${API_BASE_URL}/flood/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rainfall_mm_hr: 80, blockage_percent: 50, forecast_minutes: 180 })
@@ -212,7 +213,7 @@ export default function EocDashboard({
         route_nodes: [245631, 245632, 245633],
         hazard_score: 32
       };
-      const res = await fetch('http://127.0.0.1:8000/api/route-monitor/register', {
+      const res = await fetch(`${API_BASE_URL}/route-monitor/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -231,7 +232,7 @@ export default function EocDashboard({
     if (!monitoredRoute?.route_id) return;
     try {
       setMonitorStatus('CHECKING');
-      const res = await fetch(`http://127.0.0.1:8000/api/route-monitor/${monitoredRoute.route_id}/check`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/route-monitor/${monitoredRoute.route_id}/check`, { method: 'POST' });
       if (res.ok) {
         setMonitorStatus('ACTIVE');
         showToast("Route checked: Segment hazard within safe threshold", "success");
@@ -246,7 +247,7 @@ export default function EocDashboard({
       let routeId = monitoredRoute?.route_id;
       if (!routeId) {
         // Register route first if not registered
-        const regRes = await fetch('http://127.0.0.1:8000/api/route-monitor/register', {
+        const regRes = await fetch(`${API_BASE_URL}/route-monitor/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -265,10 +266,10 @@ export default function EocDashboard({
 
       if (routeId) {
         // Mark backend route as invalidated
-        await fetch(`http://127.0.0.1:8000/api/route-monitor/${routeId}/invalidate`, { method: 'POST' });
+        await fetch(`${API_BASE_URL}/route-monitor/${routeId}/invalidate`, { method: 'POST' });
 
         // Request replacement recommendation
-        const recRes = await fetch(`http://127.0.0.1:8000/api/route-monitor/${routeId}/replacement/recommend`, { method: 'POST' });
+        const recRes = await fetch(`${API_BASE_URL}/route-monitor/${routeId}/replacement/recommend`, { method: 'POST' });
         if (recRes.ok) {
           const recData = await recRes.json();
           setReplacementRec(recData);
@@ -292,7 +293,7 @@ export default function EocDashboard({
       return;
     }
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/route-monitor/${routeId}/replacement/recommend`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/route-monitor/${routeId}/replacement/recommend`, { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
         setReplacementRec(data);
@@ -311,7 +312,7 @@ export default function EocDashboard({
       return;
     }
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/route-monitor/${routeId}/replacement/approve`, {
+      const res = await fetch(`${API_BASE_URL}/route-monitor/${routeId}/replacement/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recommendation_id: recId, approved: true })
@@ -346,7 +347,7 @@ export default function EocDashboard({
       return;
     }
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/incidents/${incId}/response-plan`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/national/incidents/${incId}/response-plan`, { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.plan) {
         setActivePlan(data.plan);
@@ -373,11 +374,11 @@ export default function EocDashboard({
     try {
       let currentPlan = activePlan;
       if (!currentPlan) {
-        let planRes = await fetch(`http://127.0.0.1:8000/api/national/incidents/${incId}/response-plan`);
+        let planRes = await fetch(`${API_BASE_URL}/national/incidents/${incId}/response-plan`);
         let pData = await planRes.json();
 
         if (!pData.records || pData.records.length === 0) {
-          const genRes = await fetch(`http://127.0.0.1:8000/api/national/incidents/${incId}/response-plan`, { method: 'POST' });
+          const genRes = await fetch(`${API_BASE_URL}/national/incidents/${incId}/response-plan`, { method: 'POST' });
           const genData = await genRes.json();
           currentPlan = genData.plan;
         } else {
@@ -387,7 +388,7 @@ export default function EocDashboard({
 
       const pId = currentPlan?.response_plan_id || currentPlan?.plan_id;
       if (pId) {
-        const approveRes = await fetch(`http://127.0.0.1:8000/api/national/response-plans/${pId}/approve`, { method: 'POST' });
+        const approveRes = await fetch(`${API_BASE_URL}/national/response-plans/${pId}/approve`, { method: 'POST' });
         const aData = await approveRes.json();
         if (approveRes.ok && aData.plan) {
           setActivePlan(aData.plan);
@@ -414,7 +415,7 @@ export default function EocDashboard({
     }
 
     try {
-      const planRes = await fetch(`http://127.0.0.1:8000/api/national/incidents/${incId}/response-plan`);
+      const planRes = await fetch(`${API_BASE_URL}/national/incidents/${incId}/response-plan`);
       const pData = await planRes.json();
 
       if (pData.records && pData.records.length > 0) {
@@ -422,7 +423,7 @@ export default function EocDashboard({
         const action = plan.actions ? plan.actions[0] : null;
 
         if (action && action.action_id) {
-          const dispatchRes = await fetch(`http://127.0.0.1:8000/api/national/response-actions/${action.action_id}/dispatch`, { method: 'POST' });
+          const dispatchRes = await fetch(`${API_BASE_URL}/national/response-actions/${action.action_id}/dispatch`, { method: 'POST' });
           if (dispatchRes.ok) {
             setDispatchStatus({ type: 'success', message: '✓ DISPATCH RECORDED' });
             showToast("✓ Dispatch recorded. Unit set to EN_ROUTE", "success");
@@ -453,7 +454,7 @@ export default function EocDashboard({
     setFieldUnitStates(prev => ({ ...prev, [unitId]: nextState }));
     setFieldUnits(prev => prev.map(u => u.field_unit_id === unitId ? { ...u, status: nextState } : u));
     try {
-      await fetch(`http://127.0.0.1:8000/api/national/field-units/${unitId}/status`, {
+      await fetch(`${API_BASE_URL}/national/field-units/${unitId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_status: nextState, actor: 'EOC Operator', role: 'EOC_OPERATOR' })
@@ -585,10 +586,10 @@ export default function EocDashboard({
               <span className="w-2.5 h-2.5 rounded-full bg-[#0B4F8A]"></span>
               <div>
                 <h1 className="font-extrabold text-sm tracking-tight text-[#0B4F8A] leading-none uppercase">
-                  RESILIENCE ROUTE
+                  AEGIS-COP
                 </h1>
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
-                  Emergency Operations Center
+                  Tactical Edge Common Operating Picture
                 </p>
               </div>
             </div>
@@ -690,7 +691,7 @@ export default function EocDashboard({
         <header className="bg-white border-b border-[#D9E0E8] px-5 py-3 flex justify-between items-center z-20 shrink-0 shadow-sm">
           <div>
             <h2 className="text-sm font-extrabold uppercase tracking-tight text-[#0B4F8A]">
-              HUBBALLI-DHARWAD EOC — EMERGENCY OPERATIONS CENTER
+              AEGIS-COP — TACTICAL EDGE COMMON OPERATING PICTURE
             </h2>
             <p className="text-[11px] text-slate-500 font-medium">
               Real-Time Flood Assessment, Route Intelligence & Resource Command

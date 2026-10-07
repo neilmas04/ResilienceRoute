@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import AlertCenter from './AlertCenter';
 import IncidentCenter from './IncidentCenter';
 import ResourceCenter from './ResourceCenter';
+import { API_BASE_URL } from '../config';
 
 import icon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -49,10 +50,10 @@ export default function NationalView() {
     async function fetchData() {
       try {
         const [riskRes, fcRes, layersRes, fuRes] = await Promise.all([
-          fetch('http://127.0.0.1:8000/api/national/risk').then(r => r.json()).catch(() => null),
-          fetch('http://127.0.0.1:8000/api/national/risk/forecast').then(r => r.json()).catch(() => null),
-          fetch('http://127.0.0.1:8000/api/national/satellite/layers').then(r => r.json()).catch(() => null),
-          fetch('http://127.0.0.1:8000/api/national/field-units').then(r => r.json()).catch(() => null),
+          fetch(`${API_BASE_URL}/national/risk`).then(r => r.json()).catch(() => null),
+          fetch(`${API_BASE_URL}/national/risk/forecast`).then(r => r.json()).catch(() => null),
+          fetch(`${API_BASE_URL}/national/satellite/layers`).then(r => r.json()).catch(() => null),
+          fetch(`${API_BASE_URL}/national/field-units`).then(r => r.json()).catch(() => null),
         ]);
         if (riskRes) setRiskData(riskRes);
         if (fcRes) setForecastData(fcRes);

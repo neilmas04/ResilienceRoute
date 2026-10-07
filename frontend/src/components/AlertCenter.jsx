@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
 export default function AlertCenter({ onClose, selectedRegion }) {
   const [alerts, setAlerts] = useState([]);
@@ -25,7 +26,7 @@ export default function AlertCenter({ onClose, selectedRegion }) {
 
   async function fetchAlerts() {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/national/alerts');
+      const res = await fetch(`${API_BASE_URL}/national/alerts`);
       const data = await res.json();
       setAlerts(data.records || []);
     } catch (err) {
@@ -36,7 +37,7 @@ export default function AlertCenter({ onClose, selectedRegion }) {
   async function handlePreview(state, district) {
     try {
       setError(null);
-      const res = await fetch('http://127.0.0.1:8000/api/national/alerts/preview', {
+      const res = await fetch(`${API_BASE_URL}/national/alerts/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state, district })
@@ -54,7 +55,7 @@ export default function AlertCenter({ onClose, selectedRegion }) {
     try {
       setSending(true);
       setError(null);
-      const res = await fetch('http://127.0.0.1:8000/api/national/alerts/send', {
+      const res = await fetch(`${API_BASE_URL}/national/alerts/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(preview)
@@ -75,7 +76,7 @@ export default function AlertCenter({ onClose, selectedRegion }) {
   async function handleEscalate(alertId) {
     try {
       setEscalating(true);
-      const res = await fetch(`http://127.0.0.1:8000/api/national/alerts/${alertId}/escalate`, {
+      const res = await fetch(`${API_BASE_URL}/national/alerts/${alertId}/escalate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: "Recommend NDRF Dispatch Review" })
@@ -91,13 +92,17 @@ export default function AlertCenter({ onClose, selectedRegion }) {
     }
   }
 
+  const [ackLoading, setAckLoading] = useState(false);
+
   async function handleAcknowledgeMock(alertId) {
+    if (ackLoading) return;
     try {
-      const citRes = await fetch('http://127.0.0.1:8000/api/national/citizens');
+      setAckLoading(true);
+      const citRes = await fetch(`${API_BASE_URL}/national/citizens`);
       const cData = await citRes.json();
       if (cData.records && cData.records.length > 0) {
         const cit_id = cData.records[0].citizen_id;
-        const res = await fetch(`http://127.0.0.1:8000/api/national/alerts/${alertId}/acknowledge`, {
+        const res = await fetch(`${API_BASE_URL}/national/alerts/${alertId}/acknowledge`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ citizen_id: cit_id })
@@ -108,6 +113,8 @@ export default function AlertCenter({ onClose, selectedRegion }) {
       }
     } catch (err) {
       showToast("Error: " + err.message, "error");
+    } finally {
+      setAckLoading(false);
     }
   }
 
@@ -157,8 +164,8 @@ export default function AlertCenter({ onClose, selectedRegion }) {
                     <p><b>Targeted:</b> {a.targeted_count} | <b>Acknowledged:</b> {a.acknowledged_count}</p>
                   </div>
                   <div className="mt-3 flex gap-2">
-                    <button onClick={() => handleAcknowledgeMock(a.alert_id)} className="bg-slate-100 border border-slate-300 text-slate-700 px-2.5 py-1 text-xs font-bold rounded hover:bg-slate-200">
-                      Mock Citizen ACK
+                    <button onClick={() => handleAcknowledgeMock(a.alert_id)} disabled={ackLoading} className="bg-slate-100 border border-slate-300 text-slate-700 px-2.5 py-1 text-xs font-bold rounded hover:bg-slate-200 disabled:opacity-50">
+                      {ackLoading ? 'Processing...' : 'Mock Citizen ACK'}
                     </button>
                     <button onClick={() => handleEscalate(a.alert_id)} disabled={escalating} className="bg-red-700 text-white px-2.5 py-1 text-xs font-bold rounded hover:bg-red-800">
                       AUTHORITY ESCALATION (NDRF RECOMMENDATION)

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import EocDashboard from './components/EocDashboard';
 import NationalView from './components/NationalView';
 import CitizenSafety from './components/CitizenSafety';
+import { API_BASE_URL } from './config';
 
 function App() {
   const [viewMode, setViewMode] = useState('city'); // 'city', 'national', 'citizen'
@@ -29,7 +30,7 @@ function App() {
 
   const fetchScenarioStatus = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/scenario/status');
+      const res = await fetch(`${API_BASE_URL}/scenario/status`);
       if (res.ok) setScenarioStatus(await res.json());
     } catch {}
   };
@@ -37,9 +38,9 @@ function App() {
   const toggleScenario = async () => {
     if (!scenarioStatus) return;
     setScenarioLoading(true);
-    const endpoint = scenarioStatus.active ? '/api/scenario/deactivate' : '/api/scenario/activate';
+    const endpoint = scenarioStatus.active ? '/scenario/deactivate' : '/scenario/activate';
     try {
-      const res = await fetch(`http://127.0.0.1:8000${endpoint}`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, { method: 'POST' });
       if (res.ok) {
         setScenarioStatus(await res.json());
         checkWeather();
@@ -54,12 +55,12 @@ function App() {
     try {
       if (scenarioStatus?.active) {
         // Reset scenario
-        await fetch('http://127.0.0.1:8000/api/scenario/deactivate', { method: 'POST' });
+        await fetch(`${API_BASE_URL}/scenario/deactivate`, { method: 'POST' });
       } else {
         // Activate controlled flood scenario
-        await fetch('http://127.0.0.1:8000/api/scenario/activate', { method: 'POST' });
-        await fetch('http://127.0.0.1:8000/api/national/incidents/recommend', { method: 'POST' }).catch(() => {});
-        await fetch('http://127.0.0.1:8000/api/flood/simulate', {
+        await fetch(`${API_BASE_URL}/scenario/activate`, { method: 'POST' });
+        await fetch(`${API_BASE_URL}/national/incidents/recommend`, { method: 'POST' }).catch(() => {});
+        await fetch(`${API_BASE_URL}/flood/simulate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rainfall_mm_hr: 80, blockage_percent: 50, forecast_minutes: 180 })
@@ -77,7 +78,7 @@ function App() {
 
   const checkSystemStatus = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/system/status');
+      const res = await fetch(`${API_BASE_URL}/system/status`);
       if (res.ok) {
         setSystemStatus(await res.json());
       }
@@ -86,7 +87,7 @@ function App() {
 
   const checkHealth = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/health');
+      const res = await fetch(`${API_BASE_URL}/health`);
       if (res.ok) {
         setHealthStatus('connected');
       } else {
@@ -99,7 +100,7 @@ function App() {
 
   const checkGisStatus = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/gis/status');
+      const res = await fetch(`${API_BASE_URL}/gis/status`);
       const data = await res.json();
       setGisStatus(data);
     } catch {
@@ -109,7 +110,7 @@ function App() {
 
   const checkWeather = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/weather');
+      const res = await fetch(`${API_BASE_URL}/weather`);
       const data = await res.json();
       setWeatherStatus(data);
     } catch (e) {

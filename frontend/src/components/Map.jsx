@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, GeoJSON, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { API_BASE_URL } from '../config';
 
 function ClickHandler({ onPointSelect }) {
   useMapEvents({
@@ -155,10 +156,10 @@ export default function MapComponent({
     setRoute(null);
     setRouteInfoDisplay(null);
     try {
-      let url = `http://127.0.0.1:8000/api/route?origin_lat=${origin.lat}&origin_lon=${origin.lng}&destination_lat=${destination.lat}&destination_lon=${destination.lng}`;
+      let url = `${API_BASE_URL}/route?origin_lat=${origin.lat}&origin_lon=${origin.lng}&destination_lat=${destination.lat}&destination_lon=${destination.lng}`;
       
       if (routeMode === 'FLOOD-SAFE') {
-        url = `http://127.0.0.1:8000/api/route/flood-safe?origin_lat=${origin.lat}&origin_lon=${origin.lng}&destination_lat=${destination.lat}&destination_lon=${destination.lng}&forecast_minute=${forecastMinute}`;
+        url = `${API_BASE_URL}/route/flood-safe?origin_lat=${origin.lat}&origin_lon=${origin.lng}&destination_lat=${destination.lat}&destination_lon=${destination.lng}&forecast_minute=${forecastMinute}`;
       }
       
       const response = await fetch(url);

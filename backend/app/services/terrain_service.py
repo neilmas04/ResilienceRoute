@@ -3,11 +3,11 @@ import rasterio
 from rasterio.windows import Window
 import numpy as np
 import functools
+from app.config.settings import settings
 
 class TerrainService:
     def __init__(self):
-        # We know from previous inspection where the file is
-        self.dem_path = r"D:\ResilienceRoute\data\terrain\cdnd43d_v3r1\cdnd43d.tif"
+        self.dem_path = settings.DEM_PATH
         self.is_available = os.path.exists(self.dem_path)
         self.source = "ISRO/NRSC CartoDEM V3 R1 - D43D"
         import threading

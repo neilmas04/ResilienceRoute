@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
 export default function ResourceCenter({ onClose, sharedSelectedIncident, incidents = [] }) {
   const [resources, setResources] = useState([]);
@@ -33,7 +34,7 @@ export default function ResourceCenter({ onClose, sharedSelectedIncident, incide
   async function fetchResources() {
     try {
       setLoading(true);
-      const res = await fetch('http://127.0.0.1:8000/api/national/resources');
+      const res = await fetch(`${API_BASE_URL}/national/resources`);
       const data = await res.json();
       if (res.ok) setResources(data.records || []);
     } catch (err) {
@@ -45,7 +46,7 @@ export default function ResourceCenter({ onClose, sharedSelectedIncident, incide
 
   async function fetchPlanForIncident(incId) {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/incidents/${incId}/response-plan`);
+      const res = await fetch(`${API_BASE_URL}/national/incidents/${incId}/response-plan`);
       const data = await res.json();
       if (res.ok && data.records && data.records.length > 0) {
         setActivePlan(data.records[0]);
@@ -64,7 +65,7 @@ export default function ResourceCenter({ onClose, sharedSelectedIncident, incide
     }
     setActionStatus({ type: 'loading', message: 'GENERATING RESPONSE PLAN...' });
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/incidents/${selectedIncId}/response-plan`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/national/incidents/${selectedIncId}/response-plan`, { method: 'POST' });
       if (res.ok) {
         showToast("Response plan generated successfully!", "success");
         setActionStatus({ type: 'success', message: '✓ RESPONSE PLAN GENERATED' });
@@ -87,7 +88,7 @@ export default function ResourceCenter({ onClose, sharedSelectedIncident, incide
     }
     setActionStatus({ type: 'loading', message: 'APPROVING RESPONSE PLAN...' });
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/response-plans/${activePlan.plan_id}/approve`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/national/response-plans/${activePlan.plan_id}/approve`, { method: 'POST' });
       if (res.ok) {
         showToast("Response plan approved and resources reserved!", "success");
         setActionStatus({ type: 'success', message: '✓ RESPONSE PLAN APPROVED — Resources Reserved' });
@@ -112,7 +113,7 @@ export default function ResourceCenter({ onClose, sharedSelectedIncident, incide
     const action = activePlan.actions[0];
     setActionStatus({ type: 'loading', message: 'SIMULATING DISPATCH...' });
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/national/response-actions/${action.action_id}/dispatch`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/national/response-actions/${action.action_id}/dispatch`, { method: 'POST' });
       if (res.ok) {
         showToast("Dispatch recorded. Unit set to EN_ROUTE", "success");
         setActionStatus({ type: 'success', message: '✓ SIMULATED DISPATCH RECORDED' });
@@ -234,9 +235,9 @@ export default function ResourceCenter({ onClose, sharedSelectedIncident, incide
               onChange={e => setSelectedIncId(e.target.value)}
               className="w-full border border-slate-300 rounded px-3 py-1.5 text-xs bg-white text-slate-900 font-bold focus:border-[#0B4F8A] outline-none"
             >
-              {incidents.length === 0 && <option value="">-- No Active Incidents --</option>}
+              {incidents.length === 0 && <option value="" className="text-slate-900 bg-white">-- No Active Incidents --</option>}
               {incidents.map(inc => (
-                <option key={inc.incident_id} value={inc.incident_id}>
+                <option key={inc.incident_id} value={inc.incident_id} className="text-slate-900 bg-white">
                   {inc.title} ({inc.severity}) — {inc.district}
                 </option>
               ))}
@@ -271,9 +272,10 @@ export default function ResourceCenter({ onClose, sharedSelectedIncident, incide
               {!activePlan ? (
                 <button
                   onClick={handleGeneratePlan}
-                  className="w-full bg-[#0B4F8A] hover:bg-[#083B68] text-white font-bold py-2 rounded text-xs transition shadow-sm"
+                  disabled={actionStatus?.type === 'loading'}
+                  className="w-full bg-[#0B4F8A] hover:bg-[#083B68] text-white font-bold py-2 rounded text-xs transition shadow-sm disabled:opacity-50"
                 >
-                  GENERATE RESPONSE PLAN
+                  {actionStatus?.type === 'loading' ? 'GENERATING PLAN...' : 'GENERATE RESPONSE PLAN'}
                 </button>
               ) : (
                 <div className="space-y-1.5">
@@ -288,18 +290,20 @@ export default function ResourceCenter({ onClose, sharedSelectedIncident, incide
                   {activePlan.status === 'PENDING_APPROVAL' && (
                     <button
                       onClick={handleApprovePlan}
-                      className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 rounded text-xs transition shadow-sm"
+                      disabled={actionStatus?.type === 'loading'}
+                      className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 rounded text-xs transition shadow-sm disabled:opacity-50"
                     >
-                      APPROVE RESPONSE PLAN
+                      {actionStatus?.type === 'loading' ? 'APPROVING...' : 'APPROVE RESPONSE PLAN'}
                     </button>
                   )}
 
                   {activePlan.status === 'APPROVED' && (
                     <button
                       onClick={handleDispatchAction}
-                      className="w-full bg-[#0B4F8A] hover:bg-[#083B68] text-white font-bold py-2 rounded text-xs transition shadow-sm"
+                      disabled={actionStatus?.type === 'loading'}
+                      className="w-full bg-[#0B4F8A] hover:bg-[#083B68] text-white font-bold py-2 rounded text-xs transition shadow-sm disabled:opacity-50"
                     >
-                      DISPATCH RESPONSE TEAM
+                      {actionStatus?.type === 'loading' ? 'DISPATCHING...' : 'DISPATCH RESPONSE TEAM'}
                     </button>
                   )}
                 </div>

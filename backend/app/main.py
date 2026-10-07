@@ -4,8 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .services.routing_service import routing_service
 
 app = FastAPI(
-    title="ResilienceRoute API",
-    description="Backend for the ResilienceRoute decision-support platform",
+    title="AEGIS-COP API",
+    description="Backend for AEGIS-COP (Tactical Edge Common Operating Picture)",
     version="0.1.0",
 )
 

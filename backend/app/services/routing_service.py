@@ -1,10 +1,11 @@
 import os
 import networkx as nx
 import osmnx as ox
+from app.config.settings import settings
 
 class RoutingService:
     def __init__(self):
-        self.graph_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "osm", "hubballi_dharwad_drive.graphml")
+        self.graph_path = settings.OSM_GRAPH_PATH
         self.G = None
         self.nodes_count = 0
         self.edges_count = 0

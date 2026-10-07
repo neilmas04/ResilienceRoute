@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { API_BASE_URL } from '../config';
 
 export default function WeatherDashboard({ onSelectTab, isScenarioActive }) {
   const [forecast, setForecast] = useState(null);
@@ -11,7 +12,7 @@ export default function WeatherDashboard({ onSelectTab, isScenarioActive }) {
   const fetchForecast = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://127.0.0.1:8000/api/weather/forecast');
+      const res = await fetch(`${API_BASE_URL}/weather/forecast`);
       if (res.ok) {
         const data = await res.json();
         setForecast(data);
