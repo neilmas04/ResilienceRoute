@@ -30,3 +30,9 @@ Thumbs.db
 # Temporary / Cache
 cache/
 scratch/
+
+# Database / Runtime Data
+data/*.db
+data/*.db-journal
+data/*.db-shm
+data/*.db-wal
