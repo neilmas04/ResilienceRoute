@@ -34,6 +34,7 @@ from .routes.citizens import router as citizens_router
 from .routes.threats import router as threats_router
 from .routes.cop import router as cop_router
 from .routes.geo import router as geo_router
+from .routes.evidence import router as evidence_router
 
 app.include_router(national_router)
 app.include_router(risk_router)
@@ -46,6 +47,7 @@ app.include_router(citizens_router)
 app.include_router(threats_router)
 app.include_router(cop_router)
 app.include_router(geo_router)
+app.include_router(evidence_router)
 
 @app.get("/")
 def read_root():
