@@ -6,6 +6,7 @@ from app.services.threat.models import (
     ThreatEventCreate,
     ThreatEventUpdate,
     RouteExposureRequest,
+    ThreatGeoContext,
 )
 
 router = APIRouter(prefix="/api/threats", tags=["threats"])
@@ -18,6 +19,14 @@ def list_threats(
 ):
     """Retrieve all threat events matching criteria."""
     return threat_service.list_threats(category=category, status=status, severity=severity)
+
+@router.get("/{threat_id}/geo-context", response_model=ThreatGeoContext)
+def get_threat_geo_context(threat_id: str):
+    """Retrieve geographic context (terrain, nearest road node, monitored route context) for a threat event."""
+    geo_ctx = threat_service.get_threat_geo_context(threat_id)
+    if not geo_ctx:
+        raise HTTPException(status_code=404, detail="Threat event not found")
+    return geo_ctx
 
 @router.get("/{threat_id}", response_model=Dict[str, Any])
 def get_threat(threat_id: str):
@@ -64,3 +73,4 @@ def assess_route_exposure(payload: RouteExposureRequest):
         threat_ids=payload.threat_ids,
         safety_buffer_m=payload.safety_buffer_m
     )
+

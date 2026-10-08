@@ -52,3 +52,24 @@ class RouteExposureResponse(BaseModel):
     affected_threat_ids: List[str]
     threat_zones_intersected: List[Dict[str, Any]]
     details: List[Dict[str, Any]]
+
+class ThreatTerrainContext(BaseModel):
+    elevation_m: Optional[float] = None
+    susceptibility_score: Optional[int] = None
+    local_relative_elevation_m: Optional[float] = None
+    status: str = "unavailable"
+    source: str = "ISRO/NRSC CartoDEM V3 R1 - D43D"
+
+class ThreatNearestRoadContext(BaseModel):
+    node_id: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    distance_m: Optional[float] = None
+
+class ThreatGeoContext(BaseModel):
+    threat_id: str
+    location: Dict[str, float]
+    terrain: ThreatTerrainContext
+    nearest_road: ThreatNearestRoadContext
+    route_context: Dict[str, Any] = Field(default_factory=dict)
+

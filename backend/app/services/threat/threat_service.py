@@ -205,4 +205,59 @@ class ThreatService:
             "details": details
         }
 
+    def get_threat_geo_context(self, threat_id: str) -> Optional[Any]:
+        from app.services.threat.models import ThreatGeoContext, ThreatTerrainContext, ThreatNearestRoadContext
+        
+        threat = threat_repository.get_by_id(threat_id)
+        if not threat:
+            return None
+
+        lat = threat.get("latitude")
+        lon = threat.get("longitude")
+
+        if lat is None or lon is None:
+            return ThreatGeoContext(
+                threat_id=threat_id,
+                location={"latitude": 0.0, "longitude": 0.0},
+                terrain=ThreatTerrainContext(status="unavailable"),
+                nearest_road=ThreatNearestRoadContext(),
+                route_context={"related_monitored_routes": []}
+            )
+
+        from app.services.geo import geo_context_service
+        point_ctx = geo_context_service.get_point_context(lat=lat, lon=lon)
+
+        from app.repositories.monitored_route_repository import monitored_route_repository
+        all_routes = monitored_route_repository.get_all()
+        related_routes = []
+        for r_id, r_data in all_routes.items():
+            related_routes.append({
+                "route_id": r_id,
+                "monitor_status": r_data.get("monitor_status", "ACTIVE")
+            })
+
+        terrain_ctx = ThreatTerrainContext(
+            elevation_m=point_ctx.elevation_m,
+            susceptibility_score=point_ctx.susceptibility_score,
+            local_relative_elevation_m=point_ctx.local_relative_elevation_m,
+            status=point_ctx.terrain_status,
+            source=point_ctx.source
+        )
+
+        road_ctx = ThreatNearestRoadContext(
+            node_id=point_ctx.nearest_node_id,
+            latitude=point_ctx.nearest_node_lat,
+            longitude=point_ctx.nearest_node_lon,
+            distance_m=point_ctx.distance_to_nearest_node_m
+        )
+
+        return ThreatGeoContext(
+            threat_id=threat_id,
+            location={"latitude": lat, "longitude": lon},
+            terrain=terrain_ctx,
+            nearest_road=road_ctx,
+            route_context={"related_monitored_routes": related_routes}
+        )
+
 threat_service = ThreatService()
+
