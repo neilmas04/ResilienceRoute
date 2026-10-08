@@ -5,6 +5,8 @@ import ResourceCenter from './ResourceCenter';
 import IncidentCenter from './IncidentCenter';
 import AlertCenter from './AlertCenter';
 import WeatherDashboard from './WeatherDashboard';
+import ThreatPanel from './ThreatPanel';
+import { useCOP } from '../hooks/useCOP';
 import { API_BASE_URL } from '../config';
 
 export default function EocDashboard({
@@ -17,6 +19,9 @@ export default function EocDashboard({
   onRunFloodDemo,
   onOpenCitizenApp
 }) {
+  // Common Operating Picture (COP) Data Hook (10s polling refresh)
+  const { data: copData, loading: copLoading, error: copError } = useCOP(10000);
+
   // Navigation active tab: 'overview' | 'incidents' | 'field' | 'weather' | 'satellite' | 'national'
   const [activeTab, setActiveTab] = useState('overview');
   const [weatherForecast, setWeatherForecast] = useState(null);
@@ -800,26 +805,32 @@ export default function EocDashboard({
             {/* Main Area: Priority Queue (left) | Map (center) | Active Response Teams & Route Monitoring (right) */}
             <div className="flex-1 flex gap-3 overflow-hidden">
               
-              {/* Left Priority Incident Queue */}
-              <div className="w-64 bg-white border border-[#D9E0E8] rounded-md p-3 flex flex-col gap-2 shrink-0 overflow-y-auto shadow-sm text-xs">
-                <div className="font-extrabold text-[11px] text-[#0B4F8A] uppercase tracking-wider border-b border-[#D9E0E8] pb-1.5">
-                  CITY INCIDENT QUEUE
-                </div>
-                {incidents.map(inc => (
-                  <div
-                    key={inc.incident_id}
-                    onClick={() => handleSelectIncident(inc)}
-                    className={`p-2.5 rounded border text-xs cursor-pointer transition ${
-                      selectedIncident?.incident_id === inc.incident_id ? 'bg-blue-50 border-[#0B4F8A]' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="font-bold text-slate-900 mb-0.5">{inc.title}</div>
-                    <div className="flex justify-between items-center text-[10px]">
-                      <span className="text-red-700 font-bold">{inc.severity}</span>
-                      <span className="text-slate-500">{inc.status}</span>
-                    </div>
+              {/* Left COP Threat Intelligence Panel */}
+              <div className="w-64 shrink-0 overflow-hidden">
+                {copLoading ? (
+                  <div className="p-4 bg-white border border-[#D9E0E8] rounded-md text-xs font-bold text-slate-500 italic">
+                    Loading COP...
                   </div>
-                ))}
+                ) : copError ? (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md text-xs font-bold text-red-700">
+                    Unable to load COP data: {copError}
+                  </div>
+                ) : (
+                  <ThreatPanel 
+                    threats={copData?.threats || []} 
+                    onSelectThreat={(t) => handleSelectIncident({
+                      incident_id: t.id,
+                      title: t.title,
+                      severity: t.severity,
+                      status: t.status,
+                      latitude: t.latitude,
+                      longitude: t.longitude,
+                      hazard_type: t.category,
+                      description: t.description
+                    })} 
+                    selectedThreatId={selectedIncident?.incident_id} 
+                  />
+                )}
               </div>
 
               {/* Center City-Wide Situation Map */}
@@ -835,6 +846,7 @@ export default function EocDashboard({
                   incidents={incidents}
                   resources={resources}
                   fieldUnits={fieldUnits}
+                  copData={copData}
                   activeDispatch={selectedIncident ? {
                     unitLat: fieldUnits[0]?.latitude || 15.3750,
                     unitLng: fieldUnits[0]?.longitude || 75.1300,

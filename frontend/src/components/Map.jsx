@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, GeoJSON, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Circle, GeoJSON, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { API_BASE_URL } from '../config';
@@ -62,7 +62,8 @@ export default function MapComponent({
   fieldUnits = [],
   activeDispatch = null,
   replacementRoute = null,
-  monitorStatus = null
+  monitorStatus = null,
+  copData = null
 }) {
   const center = [15.3647, 75.1240];
   const [origin, setOrigin] = useState(null);
@@ -389,8 +390,61 @@ export default function MapComponent({
           </Marker>
         )}
 
+        {/* COP Active Threats Layer (Radius Circles & Center Markers) */}
+        {showIncidents && copData?.threats && copData.threats.filter(t => t && typeof t.latitude === 'number' && typeof t.longitude === 'number' && !isNaN(t.latitude) && !isNaN(t.longitude) && t.status !== 'CLOSED').map(t => {
+          const color = t.severity === 'CRITICAL' ? '#991B1B' : t.severity === 'HIGH' ? '#DC2626' : t.severity === 'MODERATE' ? '#D97706' : '#2563EB';
+          return (
+            <React.Fragment key={`cop-threat-${t.id}`}>
+              {/* Spatial Threat Radius Circle */}
+              <Circle
+                center={[t.latitude, t.longitude]}
+                radius={t.radius_m || 500}
+                pathOptions={{
+                  color: color,
+                  fillColor: color,
+                  fillOpacity: 0.15,
+                  weight: 1.5,
+                  dashArray: '4, 4'
+                }}
+              />
+              {/* Threat Center Marker */}
+              <CircleMarker
+                center={[t.latitude, t.longitude]}
+                radius={9}
+                pathOptions={{
+                  color: color,
+                  fillColor: color,
+                  fillOpacity: 0.85,
+                  weight: 2
+                }}
+              >
+                <Popup>
+                  <div className="text-xs space-y-1.5 p-0.5 max-w-xs font-sans">
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+                      <span className="font-extrabold text-slate-900 text-sm">{t.title}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-black text-white ${
+                        t.severity === 'CRITICAL' ? 'bg-red-700' : 'bg-amber-600'
+                      }`}>
+                        {t.severity}
+                      </span>
+                    </div>
+                    <div><b>Category:</b> <span className="font-bold text-[#0B4F8A]">{t.category}</span></div>
+                    <div><b>Confidence:</b> <strong className="text-slate-800">{t.confidence}</strong></div>
+                    <div><b>Status:</b> <span className="font-bold text-emerald-800">{t.status}</span></div>
+                    <div><b>Threat Radius:</b> <span className="font-bold text-slate-700">{t.radius_m || 500} meters</span></div>
+                    {t.description && <div className="text-slate-600 text-[11px] pt-1 border-t border-slate-200">{t.description}</div>}
+                    <div className="bg-slate-100 text-[9px] text-slate-600 p-1 rounded mt-1 font-mono">
+                      PROVENANCE: AEGIS-COP Threat Intelligence Feed ({t.id})
+                    </div>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            </React.Fragment>
+          );
+        })}
+
         {/* Operational Waterlogging & Drainage Incidents Layer */}
-        {showIncidents && incidents.filter(inc => inc && typeof inc.latitude === 'number' && typeof inc.longitude === 'number' && !isNaN(inc.latitude) && !isNaN(inc.longitude)).map(inc => (
+        {showIncidents && !copData?.threats && incidents.filter(inc => inc && typeof inc.latitude === 'number' && typeof inc.longitude === 'number' && !isNaN(inc.latitude) && !isNaN(inc.longitude)).map(inc => (
           <CircleMarker
             key={inc.incident_id}
             center={[inc.latitude, inc.longitude]}
